@@ -11,6 +11,7 @@ namespace eZ\Publish\Core\Limitation\Tests;
 
 use eZ\Publish\API\Repository\Values\Content\Query\Criterion\Operator;
 use eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation;
+use eZ\Publish\API\Repository\Values\User\Limitation\ObjectStateLimitation;
 use eZ\Publish\Core\Limitation\LocationLimitationType;
 
 class LocationLimitationTypeTest extends Base
@@ -58,13 +59,14 @@ class LocationLimitationTypeTest extends Base
     /**
      * @depends testConstruct
      * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::acceptValue
-     * @expectedException \eZ\Publish\API\Repository\Exceptions\NotImplementedException
      *
      * @param \eZ\Publish\Core\Limitation\LocationLimitationType $locationLimitationType
      */
     public function testAcceptValue( LocationLimitationType $locationLimitationType )
     {
-        $locationLimitationType->acceptValue( new LocationLimitation() );
+        self::assertFalse( $locationLimitationType->acceptValue( new ObjectStateLimitation() ) );
+        self::assertTrue( $locationLimitationType->acceptValue( new LocationLimitation() ) );
+        self::assertTrue( $locationLimitationType->acceptValue( new LocationLimitation() ) );
     }
 
     /**

@@ -37,7 +37,20 @@ class SiteAccessLimitationType implements SPILimitationTypeInterface
      */
     public function acceptValue( APILimitationValue $limitationValue )
     {
-        throw new \eZ\Publish\API\Repository\Exceptions\NotImplementedException( __METHOD__ );
+        if ( !$limitationValue instanceof APISiteAccessLimitation )
+            return false;
+
+        foreach ( $limitationValue->limitationValues as $value )
+        {
+            if ( !is_string( $value ) )
+            {
+                return false;
+            }
+
+            // @todo make sure value exists using config
+        }
+
+        return true;
     }
 
     /**

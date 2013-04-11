@@ -38,7 +38,20 @@ class ContentTypeLimitationType implements SPILimitationTypeInterface
      */
     public function acceptValue( APILimitationValue $limitationValue )
     {
-        throw new \eZ\Publish\API\Repository\Exceptions\NotImplementedException( __METHOD__ );
+        if ( !$limitationValue instanceof APIContentTypeLimitation )
+            return false;
+
+        foreach ( $limitationValue->limitationValues as $value )
+        {
+            if ( !is_scalar( $value ) )
+            {
+                return false;
+            }
+
+            // @todo make sure value exists using persistence
+        }
+
+        return true;
     }
 
     /**

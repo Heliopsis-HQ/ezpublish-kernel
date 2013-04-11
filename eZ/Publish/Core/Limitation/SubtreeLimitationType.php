@@ -54,7 +54,20 @@ class SubtreeLimitationType implements SPILimitationTypeInterface
      */
     public function acceptValue( APILimitationValue $limitationValue )
     {
-        throw new \eZ\Publish\API\Repository\Exceptions\NotImplementedException( __METHOD__ );
+        if ( !$limitationValue instanceof APISubtreeLimitation )
+            return false;
+
+        foreach ( $limitationValue->limitationValues as $value )
+        {
+            if ( !is_string( $value ) )
+            {
+                return false;
+            }
+
+            // @todo make sure value exists using persistence
+        }
+
+        return true;
     }
 
     /**
