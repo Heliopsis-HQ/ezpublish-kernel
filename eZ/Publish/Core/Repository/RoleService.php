@@ -23,6 +23,7 @@ use eZ\Publish\API\Repository\Values\User\RoleCreateStruct as APIRoleCreateStruc
 use eZ\Publish\Core\Repository\Values\User\UserRoleAssignment;
 use eZ\Publish\Core\Repository\Values\User\UserGroupRoleAssignment;
 use eZ\Publish\API\Repository\Values\User\Limitation\RoleLimitation;
+use eZ\Publish\API\Repository\Values\User\Limitation;
 use eZ\Publish\API\Repository\Values\User\User;
 use eZ\Publish\API\Repository\Values\User\UserGroup;
 use eZ\Publish\SPI\Persistence\User\Policy as SPIPolicy;
@@ -74,7 +75,34 @@ class RoleService implements RoleServiceInterface
         // Union makes sure default settings are ignored if provided in argument
         $this->settings = $settings + array(
             'limitationTypes' => array(),
-            'limitationMap' => array(),
+            'limitationMap' => array(
+                // @todo Inject these dynamically by activated eZ Controllers, see PR #252
+                'content' => array(
+                    // @todo 'State' incorrect, it's dynamic pr state group, see eZContentObjectStateGroup::limitations()
+                    'read' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'State' ),
+                    'diff' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree' ),
+                    'view_embed' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree' ),
+                    'create' => array( 'Class', 'Section', 'ParentOwner', 'ParentGroup', 'ParentClass', 'ParentDepth', 'Node', 'Subtree', 'Language' ),
+                    'edit' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'Language', 'State' ),
+                    'manage_locations' => array( 'Class', 'Section', 'Owner', 'Subtree' ),
+                    'hide' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'Language' ),
+                    'translate' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree', 'Language' ),
+                    'remove' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree', 'State' ),
+                    // @todo 'Status' Limitation and Limitation type is missing
+                    'versionremove' => array( 'Class', 'Section', 'Owner', 'Status', 'Node', 'Subtree' ),
+                    'pdf' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree' ),
+                ),
+                'section' => array(
+                    'assign' => array( 'Class', 'Section', 'Owner', 'NewSection' ),
+                ),
+                'state' => array(
+                    // @todo 'NewState' Limitation and Limitation type is missing (like 'NewSection')
+                    'assign' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'State', 'NewState' ),
+                ),
+                'user' => array(
+                    'login' => array( 'SiteAccess' ),
+                )
+            ),
         );
     }
 
@@ -972,6 +1000,7 @@ class RoleService implements RoleServiceInterface
     /**
      * Creates SPI Role value object from provided API role create struct
      *
+     * @uses buildPersistencePolicyObject()
      * @param \eZ\Publish\API\Repository\Values\User\RoleCreateStruct $roleCreateStruct
      *
      * @return \eZ\Publish\SPI\Persistence\User\Role
@@ -999,6 +1028,7 @@ class RoleService implements RoleServiceInterface
     /**
      * Creates SPI Policy value object from provided module, function and limitations
      *
+     * @uses validateLimitation()
      * @param string $module
      * @param string $function
      * @param \eZ\Publish\API\Repository\Values\User\Limitation[] $limitations
@@ -1013,6 +1043,7 @@ class RoleService implements RoleServiceInterface
             $limitationsToCreate = array();
             foreach ( $limitations as $limitation )
             {
+                $this->validateLimitation( $module, $function, $limitation );
                 $limitationsToCreate[$limitation->getIdentifier()] = $limitation->limitationValues;
             }
         }
@@ -1024,5 +1055,53 @@ class RoleService implements RoleServiceInterface
                 'limitations' => $limitationsToCreate
             )
         );
+    }
+
+    /**
+     * Validate limitation on module function
+     *
+     * @param string $module
+     * @param string $function
+     * @param \eZ\Publish\API\Repository\Values\User\Limitation $limitation
+     *
+     * @throws \eZ\Publish\Core\Base\Exceptions\InvalidArgumentException
+     * @return void
+     */
+    protected function validateLimitation( $module, $function, Limitation $limitation )
+    {
+        if ( empty( $this->settings['limitationMap'][$module][$function] ) )
+            $validLimitations = array();
+        else
+            $validLimitations = $this->settings['limitationMap'][$module][$function];
+
+        $identifier = $limitation->getIdentifier();
+        if ( !in_array( $identifier, $validLimitations, true ) )
+        {
+            throw new InvalidArgumentException(
+                "policy",
+                "The limitation {$identifier} is not valid on {$module}/{$function}"
+            );
+        }
+
+        if ( !isset( $this->settings['limitationTypes'][$identifier] ) )
+        {
+            throw new \eZ\Publish\Core\Base\Exceptions\BadStateException(
+                '$identifier',
+                "'{$identifier}' type does not exists but was configured as limitation on {$module}/{$function}"
+            );
+        }
+
+        /**
+         * @var $type \eZ\Publish\SPI\Limitation\Type
+         */
+        $type = $this->settings['limitationTypes'][$identifier];
+        if ( !$type->acceptValue( $limitation ) )
+        {
+            throw new InvalidArgumentException(
+                "policy",
+                "The limitation {$identifier} does not have a valid limitation value"
+            );
+        }
+        // Limitation passes
     }
 }
