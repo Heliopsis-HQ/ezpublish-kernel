@@ -467,7 +467,11 @@ abstract class RoleBase extends BaseServiceTest
 
         $role = $roleService->loadRole( 1 );
         $policies = $role->getPolicies();
-        $policy = $policies[2];
+        $policy = $policies[0];
+
+        // Verify we get correct data from backend
+        self::assertEquals( 'content', $policy->module );
+        self::assertEquals( 'read', $policy->function );
 
         $limitation = new \eZ\Publish\API\Repository\Values\User\Limitation\ContentTypeLimitation();
         $limitation->limitationValues = array( '12', '13', '14' );
