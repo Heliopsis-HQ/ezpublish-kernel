@@ -64,9 +64,20 @@ class LocationLimitationTypeTest extends Base
      */
     public function testAcceptValue( LocationLimitationType $locationLimitationType )
     {
-        self::assertFalse( $locationLimitationType->acceptValue( new ObjectStateLimitation() ) );
-        self::assertTrue( $locationLimitationType->acceptValue( new LocationLimitation() ) );
-        self::assertTrue( $locationLimitationType->acceptValue( new LocationLimitation() ) );
+        $locationLimitationType->acceptValue( new LocationLimitation() );
+        $locationLimitationType->acceptValue( new LocationLimitation( array() ) );
+    }
+
+    /**
+     * @depends testConstruct
+     * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::acceptValue
+     * @expectedException \eZ\Publish\API\Repository\Exceptions\InvalidArgumentException
+     *
+     * @param \eZ\Publish\Core\Limitation\LocationLimitationType $locationLimitationType
+     */
+    public function testAcceptValueFail( LocationLimitationType $locationLimitationType )
+    {
+        $locationLimitationType->acceptValue( new ObjectStateLimitation() );
     }
 
     /**

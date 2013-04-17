@@ -1041,11 +1041,33 @@ class RoleService implements RoleServiceInterface
         if ( $module !== '*' && $function !== '*' && !empty( $limitations ) )
         {
             $limitationsToCreate = array();
+            $allValidationErrors = array();
             foreach ( $limitations as $limitation )
             {
-                $this->validateLimitation( $module, $function, $limitation );
+                if ( isset( $limitationsToCreate[$limitation->getIdentifier()] ) )
+                {
+                    throw new InvalidArgumentException(
+                        "limitations",
+                        "'{$limitation->getIdentifier()}' was found several times among the limitations"
+                    );
+                }
+
+                $validationErrors = $this->validateLimitation( $module, $function, $limitation );
                 $limitationsToCreate[$limitation->getIdentifier()] = $limitation->limitationValues;
+
+                if ( !empty( $validationErrors ) )
+                {
+                    $allValidationErrors[$limitation->getIdentifier()] = $validationErrors;
+                }
             }
+        }
+
+        if ( !empty( $allValidationErrors ) )
+        {
+            throw new InvalidArgumentException(
+                "limitations",
+                "Some validations did not validate:\n " . var_export( $allValidationErrors, true )
+            );
         }
 
         return new SPIPolicy(
@@ -1064,8 +1086,9 @@ class RoleService implements RoleServiceInterface
      * @param string $function
      * @param \eZ\Publish\API\Repository\Values\User\Limitation $limitation
      *
-     * @throws \eZ\Publish\Core\Base\Exceptions\InvalidArgumentException
-     * @return void
+     * @throws \eZ\Publish\Core\Base\Exceptions\InvalidArgumentException If limitation is not valid for module/function
+     * @throws \eZ\Publish\Core\Base\Exceptions\BadStateException If the Role settings is in a bad state
+     * @return array
      */
     protected function validateLimitation( $module, $function, Limitation $limitation )
     {
@@ -1095,13 +1118,11 @@ class RoleService implements RoleServiceInterface
          * @var $type \eZ\Publish\SPI\Limitation\Type
          */
         $type = $this->settings['limitationTypes'][$identifier];
-        if ( !$type->acceptValue( $limitation ) )
-        {
-            throw new InvalidArgumentException(
-                "policy",
-                "The limitation {$identifier} does not have a valid limitation value"
-            );
-        }
-        // Limitation passes
+
+        // This will throw if it does not pass
+        $type->acceptValue( $limitation );
+
+        // This return array of validation errors
+        return $type->validate( $limitation );
     }
 }
