@@ -1,6 +1,6 @@
 <?php
 /**
- * File containing the eZ\Publish\Core\Limitation\Tests\LocationLimitationTypeTest class
+ * File containing a Test Case for LimitationType class
  *
  * @copyright Copyright (C) 1999-2013 eZ Systems AS. All rights reserved.
  * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License v2
@@ -10,10 +10,14 @@
 namespace eZ\Publish\Core\Limitation\Tests;
 
 use eZ\Publish\API\Repository\Values\Content\Query\Criterion\Operator;
+use eZ\Publish\API\Repository\Values\User\Limitation;
 use eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation;
 use eZ\Publish\API\Repository\Values\User\Limitation\ObjectStateLimitation;
 use eZ\Publish\Core\Limitation\LocationLimitationType;
 
+/**
+ * Test Case for LimitationType
+ */
 class LocationLimitationTypeTest extends Base
 {
     /**
@@ -57,27 +61,53 @@ class LocationLimitationTypeTest extends Base
     }
 
     /**
-     * @depends testConstruct
-     * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::acceptValue
-     *
-     * @param \eZ\Publish\Core\Limitation\LocationLimitationType $locationLimitationType
+     * @return array
      */
-    public function testAcceptValue( LocationLimitationType $locationLimitationType )
+    public function providerForTestAcceptValue()
     {
-        $locationLimitationType->acceptValue( new LocationLimitation() );
-        $locationLimitationType->acceptValue( new LocationLimitation( array() ) );
+        return array(
+            array( new LocationLimitation() ),
+            array( new LocationLimitation( array() ) ),
+            array( new LocationLimitation( array( 'limitationValues' => array( 1, '2', 's3fdaf32r' ) ) ) ),
+        );
     }
 
     /**
+     * @dataProvider providerForTestAcceptValue
+     * @depends testConstruct
+     * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::acceptValue
+     *
+     * @param \eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation $limitation
+     * @param \eZ\Publish\Core\Limitation\LocationLimitationType $locationLimitationType
+     */
+    public function testAcceptValue( LocationLimitation $limitation, LocationLimitationType $locationLimitationType )
+    {
+        $locationLimitationType->acceptValue( $limitation );
+    }
+
+    /**
+     * @return array
+     */
+    public function providerForTestAcceptValueException()
+    {
+        return array(
+            array( new ObjectStateLimitation() ),
+            array( new LocationLimitation( array( 'limitationValues' => array( true ) ) ) ),
+        );
+    }
+
+    /**
+     * @dataProvider providerForTestAcceptValueException
      * @depends testConstruct
      * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::acceptValue
      * @expectedException \eZ\Publish\API\Repository\Exceptions\InvalidArgumentException
      *
+     * @param \eZ\Publish\API\Repository\Values\User\Limitation $limitation
      * @param \eZ\Publish\Core\Limitation\LocationLimitationType $locationLimitationType
      */
-    public function testAcceptValueFail( LocationLimitationType $locationLimitationType )
+    public function testAcceptValueException( Limitation $limitation, LocationLimitationType $locationLimitationType )
     {
-        $locationLimitationType->acceptValue( new ObjectStateLimitation() );
+        $locationLimitationType->acceptValue( $limitation );
     }
 
     /**
