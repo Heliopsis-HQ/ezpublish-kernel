@@ -989,7 +989,7 @@ class RoleService implements RoleServiceInterface
             {
                 throw new \eZ\Publish\Core\Base\Exceptions\BadStateException(
                     '$identifier',
-                    "'{$identifier}' does not exists but was configured as limitation on {$module}/{$function}"
+                    "limitationType[{$identifier}] is not configured but was configured on limitationMap[{$module}][{$function}]"
                 );
             }
             $types[$identifier] = $this->settings['limitationTypes'][$identifier];
@@ -1110,7 +1110,7 @@ class RoleService implements RoleServiceInterface
         {
             throw new \eZ\Publish\Core\Base\Exceptions\BadStateException(
                 '$identifier',
-                "'{$identifier}' type does not exists but was configured as limitation on {$module}/{$function}"
+                "limitationType[{$identifier}] is not configured but was configured on limitationMap[{$module}][{$function}]"
             );
         }
 
