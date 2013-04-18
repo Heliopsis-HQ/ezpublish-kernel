@@ -57,7 +57,7 @@ class ParentUserGroupLimitationType extends AbstractPersistenceLimitationType im
                 $limitationValue->limitationValues[$key] = 1;
             }
             // Cast integers passed as string to int
-            else if ( is_string( $value ) && $value == ((int)$value) )
+            else if ( is_string( $value ) && ctype_digit( $value ) )
             {
                 $limitationValue->limitationValues[$key] = (int)$value;
             }
