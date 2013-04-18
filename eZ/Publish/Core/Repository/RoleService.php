@@ -79,28 +79,28 @@ class RoleService implements RoleServiceInterface
                 // @todo Inject these dynamically by activated eZ Controllers, see PR #252
                 'content' => array(
                     // @todo 'State' incorrect, it's dynamic pr state group, see eZContentObjectStateGroup::limitations()
-                    'read' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'State' ),
-                    'diff' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree' ),
-                    'view_embed' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree' ),
-                    'create' => array( 'Class', 'Section', 'ParentOwner', 'ParentGroup', 'ParentClass', 'ParentDepth', 'Node', 'Subtree', 'Language' ),
-                    'edit' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'Language', 'State' ),
-                    'manage_locations' => array( 'Class', 'Section', 'Owner', 'Subtree' ),
-                    'hide' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'Language' ),
-                    'translate' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree', 'Language' ),
-                    'remove' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree', 'State' ),
+                    'read' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Group' => true, 'Node' => true, 'Subtree' => true, 'State' => true ),
+                    'diff' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Node' => true, 'Subtree' => true ),
+                    'view_embed' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Node' => true, 'Subtree' => true ),
+                    'create' => array( 'Class' => true, 'Section' => true, 'ParentOwner' => true, 'ParentGroup' => true, 'ParentClass' => true, 'ParentDepth' => true, 'Node' => true, 'Subtree' => true, 'Language' => true ),
+                    'edit' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Group' => true, 'Node' => true, 'Subtree' => true, 'Language' => true, 'State' => true ),
+                    'manage_locations' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Subtree' => true ),
+                    'hide' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Group' => true, 'Node' => true, 'Subtree' => true, 'Language' => true ),
+                    'translate' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Node' => true, 'Subtree' => true, 'Language' => true ),
+                    'remove' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Node' => true, 'Subtree' => true, 'State' => true ),
                     // @todo 'Status' Limitation and Limitation type is missing
-                    'versionremove' => array( 'Class', 'Section', 'Owner', 'Status', 'Node', 'Subtree' ),
-                    'pdf' => array( 'Class', 'Section', 'Owner', 'Node', 'Subtree' ),
+                    'versionremove' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Status' => true, 'Node' => true, 'Subtree' => true ),
+                    'pdf' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Node' => true, 'Subtree' => true ),
                 ),
                 'section' => array(
-                    'assign' => array( 'Class', 'Section', 'Owner', 'NewSection' ),
+                    'assign' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'NewSection' => true ),
                 ),
                 'state' => array(
                     // @todo 'NewState' Limitation and Limitation type is missing (like 'NewSection')
-                    'assign' => array( 'Class', 'Section', 'Owner', 'Group', 'Node', 'Subtree', 'State', 'NewState' ),
+                    'assign' => array( 'Class' => true, 'Section' => true, 'Owner' => true, 'Group' => true, 'Node' => true, 'Subtree' => true, 'State' => true, 'NewState' => true ),
                 ),
                 'user' => array(
-                    'login' => array( 'SiteAccess' ),
+                    'login' => array( 'SiteAccess' => true ),
                 )
             ),
         );
@@ -983,7 +983,7 @@ class RoleService implements RoleServiceInterface
             return array();
 
         $types = array();
-        foreach ( $this->settings['limitationMap'][$module][$function] as $identifier )
+        foreach ( array_keys( $this->settings['limitationMap'][$module][$function] ) as $identifier )
         {
             if ( !isset( $this->settings['limitationTypes'][$identifier] ) )
             {
@@ -1098,7 +1098,7 @@ class RoleService implements RoleServiceInterface
             $validLimitations = $this->settings['limitationMap'][$module][$function];
 
         $identifier = $limitation->getIdentifier();
-        if ( !in_array( $identifier, $validLimitations, true ) )
+        if ( !isset( $validLimitations[$identifier] ) )
         {
             throw new InvalidArgumentException(
                 "policy",
