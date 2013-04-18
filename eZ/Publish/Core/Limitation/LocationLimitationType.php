@@ -53,7 +53,7 @@ class LocationLimitationType extends AbstractPersistenceLimitationType implement
 
         foreach ( $limitationValue->limitationValues as $key => $id )
         {
-            if ( !is_scalar( $id ) )
+            if ( !is_string( $id ) && !is_int( $id ) )
             {
                 throw new InvalidArgumentType( "\$limitationValue->limitationValues[{$key}]", "int|string", $id );
             }
