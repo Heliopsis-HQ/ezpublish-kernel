@@ -22,6 +22,7 @@ use eZ\Publish\API\Repository\Values\User\Limitation\NewSectionLimitation as API
 use eZ\Publish\API\Repository\Values\User\Limitation as APILimitationValue;
 use eZ\Publish\SPI\Limitation\Type as SPILimitationTypeInterface;
 use eZ\Publish\Core\FieldType\ValidationError;
+use eZ\Publish\SPI\Persistence\Content\Section as SPISection;
 
 /**
  * NewSectionLimitation is a Content Limitation used on 'section' 'assign' function
@@ -113,11 +114,11 @@ class NewSectionLimitationType extends AbstractPersistenceLimitationType impleme
      * @param \eZ\Publish\API\Repository\Values\User\Limitation $value
      * @param \eZ\Publish\API\Repository\Values\User\User $currentUser
      * @param \eZ\Publish\API\Repository\Values\ValueObject $object
-     * @param \eZ\Publish\API\Repository\Values\ValueObject|null $target The location, parent or "assignment" value object
+     * @param \eZ\Publish\API\Repository\Values\ValueObject[] $targets An array of location, parent or "assignment" value objects
      *
      * @return boolean
      */
-    public function evaluate( APILimitationValue $value, APIUser $currentUser, ValueObject $object, ValueObject $target = null )
+    public function evaluate( APILimitationValue $value, APIUser $currentUser, ValueObject $object, array $targets = array() )
     {
         if ( !$value instanceof APINewSectionLimitation )
         {
@@ -129,9 +130,9 @@ class NewSectionLimitationType extends AbstractPersistenceLimitationType impleme
             throw new InvalidArgumentException( '$object', 'Must be of type: Content, VersionInfo or ContentInfo' );
         }
 
-        if ( !$target instanceof Section )
+        if ( empty( $targets ) )
         {
-            throw new InvalidArgumentException( '$target', 'Must be of type: Section' );
+            throw new InvalidArgumentException( '$targets', 'Must contain objects of type: Section' );
         }
 
         if ( empty( $value->limitationValues ) )
@@ -139,10 +140,20 @@ class NewSectionLimitationType extends AbstractPersistenceLimitationType impleme
             return false;
         }
 
-        /**
-         * @var $target Section
-         */
-        return in_array( $target->id, $value->limitationValues );
+        foreach ( $targets as $target )
+        {
+            if ( !$target instanceof Section && !$target instanceof SPISection )
+            {
+                throw new InvalidArgumentException( '$targets', 'Must contain objects of type: Section' );
+            }
+
+            if ( !in_array( $target->id, $value->limitationValues ) )
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
