@@ -13,6 +13,7 @@ use eZ\Publish\API\Repository\Values\Content\Query\Criterion\Operator;
 use eZ\Publish\API\Repository\Values\User\Limitation;
 use eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation;
 use eZ\Publish\API\Repository\Values\User\Limitation\ObjectStateLimitation;
+use eZ\Publish\Core\Base\Exceptions\NotFoundException;
 use eZ\Publish\Core\Limitation\LocationLimitationType;
 
 /**
@@ -68,7 +69,7 @@ class LocationLimitationTypeTest extends Base
         return array(
             array( new LocationLimitation() ),
             array( new LocationLimitation( array() ) ),
-            array( new LocationLimitation( array( 'limitationValues' => array( 1, '2', 's3fdaf32r' ) ) ) ),
+            array( new LocationLimitation( array( 'limitationValues' => array( 0, PHP_INT_MAX, '2', 's3fdaf32r' ) ) ) ),
         );
     }
 
@@ -108,6 +109,94 @@ class LocationLimitationTypeTest extends Base
     public function testAcceptValueException( Limitation $limitation, LocationLimitationType $locationLimitationType )
     {
         $locationLimitationType->acceptValue( $limitation );
+    }
+
+    /**
+     * @return array
+     */
+    public function providerForTestValidatePass()
+    {
+        return array(
+            array( new LocationLimitation() ),
+            array( new LocationLimitation( array() ) ),
+            array( new LocationLimitation( array( 'limitationValues' => array( 2 ) ) ) ),
+        );
+    }
+
+    /**
+     * @dataProvider providerForTestValidatePass
+     * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::validate
+     *
+     * @param \eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation $limitation
+     */
+    public function testValidatePass( LocationLimitation $limitation )
+    {
+        if ( !empty( $limitation->limitationValues ) )
+        {
+            $this->getPersistenceMock()
+                ->expects( $this->any() )
+                ->method( "locationHandler" )
+                ->will( $this->returnValue( $this->locationHandlerMock ) );
+
+            foreach ( $limitation->limitationValues as $key => $value )
+            {
+                $this->locationHandlerMock
+                    ->expects( $this->at( $key ) )
+                    ->method( "load" )
+                    ->with( $value );
+            }
+        }
+
+        // Need to create inline instead of depending on testConstruct() to get correct mock instance
+        $locationLimitationType = $this->testConstruct();
+
+        $validationErrors = $locationLimitationType->validate( $limitation );
+        self::assertEmpty( $validationErrors );
+    }
+
+    /**
+     * @return array
+     */
+    public function providerForTestValidateError()
+    {
+        return array(
+            array( new LocationLimitation(), 0 ),
+            array( new LocationLimitation( array( 'limitationValues' => array( 0 ) ) ), 1 ),
+            array( new LocationLimitation( array( 'limitationValues' => array( 0, PHP_INT_MAX ) ) ), 2 ),
+        );
+    }
+
+    /**
+     * @dataProvider providerForTestValidateError
+     * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::validate
+     *
+     * @param \eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation $limitation
+     * @param int $errorCount
+     */
+    public function testValidateError( LocationLimitation $limitation, $errorCount )
+    {
+        if ( !empty( $limitation->limitationValues ) )
+        {
+            $this->getPersistenceMock()
+                ->expects( $this->any() )
+                ->method( "locationHandler" )
+                ->will( $this->returnValue( $this->locationHandlerMock ) );
+
+            foreach ( $limitation->limitationValues as $key => $value )
+            {
+                $this->locationHandlerMock
+                    ->expects( $this->at( $key ) )
+                    ->method( "load" )
+                    ->with( $value )
+                    ->will( $this->throwException( new NotFoundException( 'location', $value ) ) );
+            }
+        }
+
+        // Need to create inline instead of depending on testConstruct() to get correct mock instance
+        $locationLimitationType = $this->testConstruct();
+
+        $validationErrors = $locationLimitationType->validate( $limitation );
+        self::assertCount( $errorCount, $validationErrors );
     }
 
     /**
