@@ -214,6 +214,23 @@ class ContentExtension extends Twig_Extension
                 ->getViewParameters();
         }
 
+        // Adding locale as parameter if it is not already set.
+        if ( !isset( $params['parameters']['locale'] ) )
+        {
+            /** @var \Symfony\Component\HttpFoundation\Request $request */
+            $request = $this->container->get( 'request' );
+            if ( $request->attributes->has( '_locale' ) )
+            {
+                $params['parameters']['locale'] = $request->attributes->get( '_locale' );
+            }
+            else
+            {
+                /** @var \eZ\Publish\Core\MVC\Symfony\Locale\LocaleConverterInterface $localeConverter */
+                $localeConverter = $this->container->get( 'ezpublish.locale.converter' );
+                $params['parameters']['locale'] = $localeConverter->convertToPOSIX( $field->languageCode );
+            }
+        }
+
         // make sure we can easily add class="<fieldtypeidentifier>-field" to the
         // generated HTML
         if ( isset( $params['attr']['class'] ) )
