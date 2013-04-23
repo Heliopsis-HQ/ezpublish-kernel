@@ -300,7 +300,9 @@ class ContentExtensionIntegrationTest extends Twig_Test_IntegrationTestCase
                     $this->equalTo( "ezpublish.api.repository" ),
                     $this->equalTo( "ezpublish.fieldType.ezxmltext.converter.html5" ),
                     $this->equalTo( "ezpublish.fieldType.ezimage.variation_service" ),
-                    $this->equalTo( "ezpublish.fieldType.parameterProviderRegistry" )
+                    $this->equalTo( "ezpublish.fieldType.parameterProviderRegistry" ),
+                    $this->equalTo( "request" ),
+                    $this->equalTo( "ezpublish.locale.converter" )
                 )
             )
             ->will(
@@ -329,11 +331,54 @@ class ContentExtensionIntegrationTest extends Twig_Test_IntegrationTestCase
             case "ezpublish.fieldType.parameterProviderRegistry":
                 return $this->getMock( 'eZ\\Publish\\Core\\MVC\\Symfony\\FieldType\\View\\ParameterProviderRegistryInterface' );
 
+            case "request":
+                return $this->getRequestMock();
+
+            case "ezpublish.locale.converter":
+                return $this->getLocaleConverterMock();
+
             case "ezpublish.fieldType.ezxmltext.converter.html5":
             case "ezpublish.fieldType.ezimage.variation_service":
         }
 
         return null;
+    }
+
+    protected function getRequestMock()
+    {
+        $parameterBagMock = $this->getMock( "Symfony\\Component\\HttpFoundation\\ParameterBag" );
+
+        $parameterBagMock->expects( $this->any() )
+            ->method( "has" )
+            ->with( $this->equalTo( "_locale" ) )
+            ->will( $this->returnValue( true ) );
+
+        $parameterBagMock->expects( $this->any() )
+            ->method( "get" )
+            ->with( $this->equalTo( "_locale" ) )
+            ->will( $this->returnValue( "fr_FR" ) );
+
+        $mock = $this->getMock( "Symfony\\Component\\HttpFoundation\\Request" );
+        $mock->attributes = $parameterBagMock;
+
+        $mock->expects( $this->any() )
+            ->method( "__get" )
+            ->with( $this->equalTo( "attributes" ) )
+            ->will( $this->returnValue( $parameterBagMock ) );
+
+        return $mock;
+    }
+
+    protected function getLocaleConverterMock()
+    {
+        $mock = $this->getMock( "eZ\\Publish\\Core\\MVC\\Symfony\\Locale\\LocaleConverterInterface" );
+
+        $mock->expects( $this->any() )
+            ->method( "convertToPOSIX" )
+            ->with( $this->equalTo( "fre-FR" ) )
+            ->will( $this->returnValue( "hr_HR" ) );
+
+        return $mock;
     }
 
     /**
