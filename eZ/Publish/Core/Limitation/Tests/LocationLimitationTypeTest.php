@@ -9,12 +9,17 @@
 
 namespace eZ\Publish\Core\Limitation\Tests;
 
+use eZ\Publish\API\Repository\Values\ValueObject;
+use eZ\Publish\API\Repository\Values\Content\ContentInfo;
+use eZ\Publish\API\Repository\Values\Content\LocationCreateStruct;
 use eZ\Publish\API\Repository\Values\Content\Query\Criterion\Operator;
 use eZ\Publish\API\Repository\Values\User\Limitation;
 use eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation;
 use eZ\Publish\API\Repository\Values\User\Limitation\ObjectStateLimitation;
 use eZ\Publish\Core\Base\Exceptions\NotFoundException;
 use eZ\Publish\Core\Limitation\LocationLimitationType;
+use eZ\Publish\Core\Repository\Values\Content\Location;
+use eZ\Publish\Core\Repository\Values\Content\ContentCreateStruct;
 
 /**
  * Test Case for LimitationType
@@ -191,6 +196,12 @@ class LocationLimitationTypeTest extends Base
                     ->will( $this->throwException( new NotFoundException( 'location', $value ) ) );
             }
         }
+        else
+        {
+            $this->getPersistenceMock()
+                ->expects( $this->never() )
+                ->method( $this->anything() );
+        }
 
         // Need to create inline instead of depending on testConstruct() to get correct mock instance
         $locationLimitationType = $this->testConstruct();
@@ -213,6 +224,187 @@ class LocationLimitationTypeTest extends Base
         self::assertInstanceOf( '\eZ\Publish\API\Repository\Values\User\Limitation\LocationLimitation', $value );
         self::assertInternalType( 'array', $value->limitationValues );
         self::assertEquals( $expected, $value->limitationValues );
+    }
+
+    /**
+     * @return array
+     */
+    public function providerForTestEvaluate()
+    {
+        // Mocks for testing Content & VersionInfo objects, should only be used once because of expect rules.
+        $contentMock = $this->getMock(
+            "eZ\\Publish\\API\\Repository\\Values\\Content\\Content",
+            array(),
+            array(),
+            '',
+            false
+        );
+
+        $versionInfoMock = $this->getMock(
+            "eZ\\Publish\\API\\Repository\\Values\\Content\\VersionInfo",
+            array(),
+            array(),
+            '',
+            false
+        );
+
+        $contentMock
+            ->expects( $this->once() )
+            ->method( 'getVersionInfo' )
+            ->will( $this->returnValue( $versionInfoMock ) );
+
+        $versionInfoMock
+            ->expects( $this->once() )
+            ->method( 'getContentInfo' )
+            ->will( $this->returnValue( new ContentInfo() ) );
+
+        $versionInfoMock2 = $this->getMock(
+            "eZ\\Publish\\API\\Repository\\Values\\Content\\VersionInfo",
+            array(),
+            array(),
+            '',
+            false
+        );
+
+        $versionInfoMock2
+            ->expects( $this->once() )
+            ->method( 'getContentInfo' )
+            ->will( $this->returnValue( new ContentInfo() ) );
+
+        return array(
+            // ContentInfo, with targets, no access
+            array(
+                'limitation' => new LocationLimitation(),
+                'object' => new ContentInfo(),
+                'targets' => array( new Location() ),
+                'persistence' => array(),
+                'expected' => false
+            ),
+            // ContentInfo, with targets, no access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2 ) ) ),
+                'object' => new ContentInfo(),
+                'targets' => array( new Location( array( 'id' => 55 ) ) ),
+                'persistence' => array(),
+                'expected' => false
+            ),
+            // ContentInfo, with targets, with access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2 ) ) ),
+                'object' => new ContentInfo(),
+                'targets' => array( new Location( array( 'id' => 2 ) ) ),
+                'persistence' => array(),
+                'expected' => true
+            ),
+            // ContentInfo, no targets, with access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2 ) ) ),
+                'object' => new ContentInfo(),
+                'targets' => array(),
+                'persistence' => array( new Location( array( 'id' => 2 ) ) ),
+                'expected' => true
+            ),
+            // ContentInfo, no targets, no access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2, 43 ) ) ),
+                'object' => new ContentInfo(),
+                'targets' => array(),
+                'persistence' => array( new Location( array( 'id' => 55 ) ) ),
+                'expected' => false
+            ),
+            // Content, with targets, with access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2 ) ) ),
+                'object' => $contentMock,
+                'targets' => array( new Location( array( 'id' => 2 ) ) ),
+                'persistence' => array(),
+                'expected' => true
+            ),
+            // VersionInfo, with targets, with access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2 ) ) ),
+                'object' => $versionInfoMock2,
+                'targets' => array( new Location( array( 'id' => 2 ) ) ),
+                'persistence' => array(),
+                'expected' => true
+            ),
+            // ContentCreateStruct, no targets, no access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2 ) ) ),
+                'object' => new ContentCreateStruct(),
+                'targets' => array(),
+                'persistence' => array(),
+                'expected' => false
+            ),
+            // ContentCreateStruct, with targets, no access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2, 43 ) ) ),
+                'object' => new ContentCreateStruct(),
+                'targets' => array( new LocationCreateStruct( array( 'parentLocationId' => 55 ) ) ),
+                'persistence' => array(),
+                'expected' => false
+            ),
+            // ContentCreateStruct, with targets, with access
+            array(
+                'limitation' => new LocationLimitation( array( 'limitationValues' => array( 2, 43 ) ) ),
+                'object' => new ContentCreateStruct(),
+                'targets' => array( new LocationCreateStruct( array( 'parentLocationId' => 43 ) ) ),
+                'persistence' => array(),
+                'expected' => true
+            ),
+        );
+    }
+
+    /**
+     * @dataProvider providerForTestEvaluate
+     * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::evaluate
+     */
+    public function testEvaluate(
+        LocationLimitation $limitation,
+        ValueObject $object,
+        array $targets,
+        array $persistenceLocations,
+        $expected
+    )
+    {
+        // Need to create inline instead of depending on testConstruct() to get correct mock instance
+        $locationLimitationType = $this->testConstruct();
+
+        $userMock = $this->getUserMock();
+        $userMock
+            ->expects( $this->never() )
+            ->method( $this->anything() );
+
+        $persistenceMock = $this->getPersistenceMock();
+        if ( empty( $persistenceLocations ) )
+        {
+            $persistenceMock
+                ->expects( $this->never() )
+                ->method( $this->anything() );
+        }
+        else
+        {
+            $this->getPersistenceMock()
+                ->expects( $this->once() )
+                ->method( "locationHandler" )
+                ->will( $this->returnValue( $this->locationHandlerMock ) );
+
+            $this->locationHandlerMock
+                ->expects( $this->once() )
+                ->method( "loadLocationsByContent" )
+                ->with( $object->id )
+                ->will( $this->returnValue( $persistenceLocations ) );
+        }
+
+        $value = $locationLimitationType->evaluate(
+            $limitation,
+            $userMock,
+            $object,
+            $targets
+        );
+
+        self::assertInternalType( 'boolean', $value );
+        self::assertEquals( $expected, $value );
     }
 
     /**
