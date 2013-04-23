@@ -356,6 +356,77 @@ class LocationLimitationTypeTest extends Base
     }
 
     /**
+     * @return array
+     */
+    public function providerForTestEvaluateInvalidArgument()
+    {
+        return array(
+            // invalid limitation
+            array(
+                'limitation' => new ObjectStateLimitation(),
+                'object' => new ContentInfo(),
+                'targets' => array( new Location() ),
+                'persistence' => array(),
+            ),
+            // invalid object
+            array(
+                'limitation' => new LocationLimitation(),
+                'object' => new ObjectStateLimitation(),
+                'targets' => array( new Location() ),
+                'persistence' => array(),
+            ),
+            // invalid target
+            array(
+                'limitation' => new LocationLimitation(),
+                'object' => new ContentInfo(),
+                'targets' => array( new ObjectStateLimitation() ),
+                'persistence' => array(),
+            ),
+            // invalid target when using ContentCreateStruct
+            array(
+                'limitation' => new LocationLimitation(),
+                'object' => new ContentCreateStruct(),
+                'targets' => array( new Location() ),
+                'persistence' => array(),
+            ),
+        );
+    }
+
+    /**
+     * @dataProvider providerForTestEvaluateInvalidArgument
+     * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::evaluate
+     * @expectedException \eZ\Publish\API\Repository\Exceptions\InvalidArgumentException
+     */
+    public function testEvaluateInvalidArgument(
+        Limitation $limitation,
+        ValueObject $object,
+        array $targets,
+        array $persistenceLocations
+    )
+    {
+        // Need to create inline instead of depending on testConstruct() to get correct mock instance
+        $locationLimitationType = $this->testConstruct();
+
+        $userMock = $this->getUserMock();
+        $userMock
+            ->expects( $this->never() )
+            ->method( $this->anything() );
+
+        $persistenceMock = $this->getPersistenceMock();
+        $persistenceMock
+            ->expects( $this->never() )
+            ->method( $this->anything() );
+
+        $v = $locationLimitationType->evaluate(
+            $limitation,
+            $userMock,
+            $object,
+            $targets
+        );
+        var_dump( $v );
+    }
+
+    /**
      * @dataProvider providerForTestEvaluate
      * @covers \eZ\Publish\Core\Limitation\LocationLimitationType::evaluate
      */
