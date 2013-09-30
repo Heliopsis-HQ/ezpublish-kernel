@@ -142,7 +142,6 @@ class LocationHandler extends AbstractHandler implements LocationHandlerInterfac
         $return = $this->persistenceFactory->getLocationHandler()->hide( $locationId );
 
         $this->cache->clear( 'location' );//TIMBER! (visibility)
-        $this->cache->clear( 'user', 'role', 'assignments', 'byGroup' );
 
         return $return;
     }
@@ -156,7 +155,6 @@ class LocationHandler extends AbstractHandler implements LocationHandlerInterfac
         $return = $this->persistenceFactory->getLocationHandler()->unHide( $locationId );
 
         $this->cache->clear( 'location' );//TIMBER! (visibility)
-        $this->cache->clear( 'user', 'role', 'assignments', 'byGroup' );
 
         return $return;
     }
