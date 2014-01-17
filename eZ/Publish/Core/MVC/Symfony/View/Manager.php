@@ -9,6 +9,7 @@
 
 namespace eZ\Publish\Core\MVC\Symfony\View;
 
+use eZ\Publish\Core\MVC\ConfigResolverInterface;
 use eZ\Publish\Core\MVC\Symfony\View\ViewManagerInterface;
 use eZ\Publish\API\Repository\Values\Content\Content;
 use eZ\Publish\API\Repository\Values\Content\Location;
@@ -90,11 +91,17 @@ class Manager implements ViewManagerInterface
      */
     protected $viewBaseLayout;
 
-    public function __construct( EngineInterface $templateEngine, EventDispatcherInterface $eventDispatcher, Repository $repository, $viewBaseLayout, LoggerInterface $logger = null )
+    /**
+     * @var ConfigResolverInterface
+     */
+    protected $configResolver;
+
+    public function __construct( EngineInterface $templateEngine, EventDispatcherInterface $eventDispatcher, Repository $repository, ConfigResolverInterface $configResolver, $viewBaseLayout, LoggerInterface $logger = null )
     {
         $this->templateEngine = $templateEngine;
         $this->eventDispatcher = $eventDispatcher;
         $this->repository = $repository;
+        $this->configResolver = $configResolver;
         $this->viewBaseLayout = $viewBaseLayout;
         $this->logger = $logger;
     }
@@ -248,7 +255,7 @@ class Manager implements ViewManagerInterface
      */
     public function renderLocation( Location $location, $viewType = ViewManagerInterface::VIEW_TYPE_FULL, $parameters = array() )
     {
-        $content = $this->repository->getContentService()->loadContentByContentInfo( $location->getContentInfo() );
+        $content = $this->repository->getContentService()->loadContentByContentInfo( $location->getContentInfo(), $this->configResolver->getParameter( 'languages' ) );
         foreach ( $this->getAllLocationViewProviders() as $viewProvider )
         {
             $view = $viewProvider->getView( $location, $viewType );

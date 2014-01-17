@@ -38,6 +38,11 @@ class ViewManagerTest extends PHPUnit_Framework_TestCase
      */
     private $repositoryMock;
 
+    /**
+     * @var \PHPUnit_Framework_MockObject_MockObject
+     */
+    private $configResolverMock;
+
     private $viewBaseLayout = 'EzPublishCoreBundle::viewbase.html.twig';
 
     protected function setUp()
@@ -48,10 +53,14 @@ class ViewManagerTest extends PHPUnit_Framework_TestCase
         $this->repositoryMock = $this->getMockBuilder( 'eZ\\Publish\\Core\\Repository\\Repository' )
             ->disableOriginalConstructor()
             ->getMock();
+        $this->configResolverMock = $this->getMockBuilder( 'eZ\\Publish\\Core\\MVC\\ConfigResolverInterface' )
+            ->disableOriginalConstructor()
+            ->getMock();
         $this->viewManager = new Manager(
             $this->templateEngineMock,
             $this->eventDispatcherMock,
             $this->repositoryMock,
+            $this->configResolverMock,
             $this->viewBaseLayout
         );
     }
@@ -234,13 +243,20 @@ class ViewManagerTest extends PHPUnit_Framework_TestCase
                 )
             );
 
+        $mockLanguages = array( 'eng-GB' );
+        $this->configResolverMock
+            ->expects( $this->once() )
+            ->method( "getParameter" )
+            ->with( 'languages' )
+            ->will( $this->returnValue( $mockLanguages ) );
+
         $contentService = $this->getMockBuilder( "eZ\\Publish\\Core\\Repository\\ContentService" )
             ->disableOriginalConstructor()
             ->getMock();
 
         $contentService->expects( $this->any() )
             ->method( "loadContentByContentInfo" )
-            ->with( $contentInfo )
+            ->with( $contentInfo, $mockLanguages )
             ->will(
                 $this->returnValue( $content )
             );
