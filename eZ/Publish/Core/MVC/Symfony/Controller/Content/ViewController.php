@@ -9,12 +9,14 @@
 
 namespace eZ\Publish\Core\MVC\Symfony\Controller\Content;
 
+use eZ\Publish\Core\Base\Exceptions\NotFoundException;
 use eZ\Publish\Core\MVC\Symfony\Controller\Controller;
 use eZ\Publish\Core\MVC\Symfony\View\Manager as ViewManager;
 use eZ\Publish\Core\MVC\Symfony\MVCEvents;
 use eZ\Publish\Core\MVC\Symfony\Event\APIContentExceptionEvent;
 use eZ\Publish\Core\MVC\Symfony\Security\Authorization\Attribute as AuthorizationAttribute;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use DateTime;
 use Exception;
@@ -106,6 +108,10 @@ class ViewController extends Controller
 
             return $response;
         }
+        catch( NotFoundException $e )
+        {
+            throw new NotFoundHttpException( $e->getMessage(), $e );
+        }
         catch ( Exception $e )
         {
             return $this->handleViewException( $response, $params, $e, $viewType, null, $locationId );
@@ -145,6 +151,10 @@ class ViewController extends Controller
             );
 
             return $response;
+        }
+        catch( NotFoundException $e )
+        {
+            throw new NotFoundHttpException( $e->getMessage(), $e );
         }
         catch ( Exception $e )
         {
