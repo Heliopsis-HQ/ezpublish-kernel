@@ -14,19 +14,25 @@ use eZ\Publish\Core\Persistence\Legacy\Content\StorageFieldValue;
 use eZ\Publish\SPI\Persistence\Content\FieldValue;
 use eZ\Publish\SPI\Persistence\Content\Type\FieldDefinition;
 use eZ\Publish\Core\Persistence\Legacy\Content\StorageFieldDefinition;
+use eZ\Publish\SPI\Persistence\Content\Type as ContentType;
+use eZ\Publish\Core\Persistence\Database\DatabaseHandler;
+use PDO;
 
 class Relation implements Converter
 {
     /**
-     * Factory for current class
-     *
-     * @note Class should instead be configured as service if it gains dependencies.
-     *
-     * @return Url
+     * @var \eZ\Publish\Core\Persistence\Database\DatabaseHandler
      */
-    public static function create()
+    private $db;
+
+    /**
+     * Create instance of RelationList converter
+     *
+     * @param \eZ\Publish\Core\Persistence\Database\DatabaseHandler $db
+     */
+    public function __construct( DatabaseHandler $db )
     {
-        return new self;
+        $this->db = $db;
     }
 
     /**
@@ -51,10 +57,71 @@ class Relation implements Converter
      */
     public function toFieldValue( StorageFieldValue $value, FieldValue $fieldValue )
     {
+        $destinationContentId = $value->dataInt ? : null;
+
+        //Destination content may have been deleted without updating datatype value
+        if ( is_int( $destinationContentId ) && !$this->contentExistsInDB( $value->dataInt ) )
+        {
+            $destinationContentId = null;
+        }
+
         $fieldValue->data = array(
-            "destinationContentId" => $value->dataInt ?: null,
+            "destinationContentId" => $destinationContentId,
         );
         $fieldValue->sortKey = (int)$value->sortKeyInt;
+    }
+
+    /**
+     * Checks destination content existence in DB
+     *
+     * @param $destinationContentId
+     * @return bool
+     */
+    private function contentExistsInDB( $destinationContentId )
+    {
+        $q = $this->db->createSelectQuery();
+        $q
+            ->select(
+                $this->db->aliasedColumn( $q, 'id', 'ezcontentobject' )
+            )
+            ->from( $this->db->quoteTable( 'ezcontentobject' ) )
+            ->leftJoin(
+                $this->db->quoteTable( 'ezcontentobject_tree' ),
+                $q->expr->lAnd(
+                    $q->expr->eq(
+                        $this->db->quoteColumn( 'contentobject_id', 'ezcontentobject_tree' ),
+                        $this->db->quoteColumn( 'id', 'ezcontentobject' )
+                    ),
+                    $q->expr->eq(
+                        $this->db->quoteColumn( 'node_id', 'ezcontentobject_tree' ),
+                        $this->db->quoteColumn( 'main_node_id', 'ezcontentobject_tree' )
+                    )
+                )
+            )
+            ->leftJoin(
+                $this->db->quoteTable( 'ezcontentclass' ),
+                $q->expr->lAnd(
+                    $q->expr->eq(
+                        $this->db->quoteColumn( 'id', 'ezcontentclass' ),
+                        $this->db->quoteColumn( 'contentclass_id', 'ezcontentobject' )
+                    ),
+                    $q->expr->eq(
+                        $this->db->quoteColumn( 'version', 'ezcontentclass' ),
+                        $q->bindValue( ContentType::STATUS_DEFINED, null, PDO::PARAM_INT )
+                    )
+                )
+            )
+            ->where(
+                $q->expr->eq(
+                    $this->db->quoteColumn( 'id', 'ezcontentobject' ),
+                    $destinationContentId
+                )
+            );
+
+        $stmt = $q->prepare();
+        $stmt->execute();
+
+        return $stmt->rowCount() > 0;
     }
 
     /**
